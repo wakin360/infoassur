@@ -16,6 +16,7 @@ def is_configured() -> bool:
 
 
 def _request(method: str, query: str = "", payload: dict | None = None) -> object:
+	# The service-role credential is used only by this server-side module, never browser code.
 	base_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
 	service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 	if not base_url or not service_key:
@@ -43,6 +44,7 @@ def _request(method: str, query: str = "", payload: dict | None = None) -> objec
 
 
 def load_items() -> dict[str, dict[str, str]]:
+	# Fetch the shared table each request so all devices and serverless instances see the same items.
 	rows = _request("GET", "?select=item_name,location,ciphertext,iv,timestamp&order=timestamp.desc")
 	return {
 		row["item_name"]: {
@@ -56,6 +58,7 @@ def load_items() -> dict[str, dict[str, str]]:
 
 
 def save_item(item_name: str, record: dict[str, str]) -> None:
+	# Upsert by the primary key so registering the same item name updates that record.
 	_request(
 		"POST",
 		"?on_conflict=item_name",

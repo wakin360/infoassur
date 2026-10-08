@@ -17,31 +17,41 @@ STAFF_PASSWORD = os.environ.get("STAFF_PASSWORD")
 # ==============================================================================
 
 def generate_key() -> bytes:
+    # Make a random 32-byte key for AES-256. Production uses the saved Vercel key below.
     return os.urandom(32)
 
 def encrypt_secret_answer(secret_text: str, key: bytes) -> tuple[str, str]:
+    # Make capitalization and extra spaces consistent before encryption.
     clean_bytes = secret_text.strip().lower().encode('utf-8')
+    # Add padding because AES encrypts data in fixed-size blocks.
     padded_bytes = pad(clean_bytes, AES.block_size)
+    # Create a new random IV so the same answer encrypts differently each time.
     iv = os.urandom(16)
     cipher = AES.new(key, AES.MODE_CBC, iv)
     ciphertext = cipher.encrypt(padded_bytes)
+    # Convert the encrypted bytes to text so they can be stored in Supabase.
     return base64.b64encode(ciphertext).decode('utf-8'), base64.b64encode(iv).decode('utf-8')
 
 def decrypt_secret_answer(ciphertext_b64: str, iv_b64: str, key: bytes) -> str:
+    # Turn the stored text back into bytes and recreate the cipher with the same key and IV.
     ciphertext = base64.b64decode(ciphertext_b64)
     iv = base64.b64decode(iv_b64)
     cipher = AES.new(key, AES.MODE_CBC, iv)
+    # Decrypt the answer, remove its padding, and turn it back into readable text.
     decrypted_padded = cipher.decrypt(ciphertext)
     return unpad(decrypted_padded, AES.block_size).decode('utf-8')
 
 def verify_student_claim(user_input: str, ciphertext_b64: str, iv_b64: str, key: bytes) -> bool:
     try:
         decrypted_secret = decrypt_secret_answer(ciphertext_b64, iv_b64, key)
+        # Accept the claim only if the cleaned answers match exactly.
         return user_input.strip().lower() == decrypted_secret
     except Exception:
+        # If decryption fails, do not accept the claim.
         return False
 
-# The encryption key must remain stable across serverless invocations.
+# Load the same saved AES key on every Vercel instance so records can be checked.
+# Do not change this key after saving items, or their answers will no longer decrypt.
 try:
     SYSTEM_KEY = bytes.fromhex(os.environ.get("ENCRYPTION_KEY", ""))
 except ValueError:
