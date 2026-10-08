@@ -7,8 +7,8 @@ from Cryptodome.Util.Padding import pad, unpad
 
 # Initialize Flask App
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "ua_secret_session_key_2026")
-STAFF_PASSWORD = os.environ.get("STAFF_PASSWORD", "admin")
+app.secret_key = os.environ.get("FLASK_SECRET_KEY")
+STAFF_PASSWORD = os.environ.get("STAFF_PASSWORD")
 
 # ==============================================================================
 # CRYPTOGRAPHIC MODULE (AES-256)
@@ -66,7 +66,6 @@ STUDENT_TEMPLATE = """
                 <img class="brand-seal" src="https://web.ua.edu.ph/wp-content/uploads/2024/09/ua-logo.png" alt="University of the Assumption seal">
                 <span class="brand-name">University of the Assumption<span class="brand-unit">Campus Services</span></span>
             </a>
-            <a class="masthead-link" href="/admin">Staff access</a>
         </header>
         <main class="portal-main">
             <section class="hero-copy">
@@ -163,13 +162,17 @@ STAFF_TEMPLATE = """
         {% endwith %}
 
         {% if not session.get('staff_logged_in') %}
-            <h2>Staff sign in</h2>
-            <p class="subtitle">Authorized staff can register found belongings here.</p>
-            <form action="/admin" method="POST">
-                <label for="staff-password">Staff password</label>
-                <input id="staff-password" type="password" name="password" placeholder="Enter password" required>
-                <button type="submit">Sign in</button>
-            </form>
+            {% if setup_error %}
+                <div class="alert alert-danger" role="alert">{{ setup_error }}</div>
+            {% else %}
+                <h2>Staff sign in</h2>
+                <p class="subtitle">Authorized staff can register found belongings here.</p>
+                <form action="/admin" method="POST">
+                    <label for="staff-password">Staff password</label>
+                    <input id="staff-password" type="password" name="password" placeholder="Enter password" required>
+                    <button type="submit">Sign in</button>
+                </form>
+            {% endif %}
         {% else %}
             <h2>Register an item</h2>
             <p class="subtitle">Keep one identifying detail private for claim verification.</p>
@@ -225,6 +228,12 @@ def student_view():
 @app.route("/admin", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
+        if not STAFF_PASSWORD or not app.secret_key:
+            return render_template_string(
+                STAFF_TEMPLATE,
+                setup_error="Staff access is not configured. Contact the system administrator.",
+            )
+
         if request.form.get("password") == STAFF_PASSWORD:
             session["staff_logged_in"] = True
             flash("Staff authentication successful.", "success")
@@ -232,7 +241,7 @@ def admin_login():
         else:
             flash("Incorrect staff password!", "danger")
             
-    return render_template_string(STAFF_TEMPLATE)
+    return render_template_string(STAFF_TEMPLATE, setup_error=None)
 
 
 @app.route("/admin/log", methods=["POST"])
