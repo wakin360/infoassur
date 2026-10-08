@@ -1,0 +1,174 @@
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap');
+
+:root {
+    --navy: #102b4e;
+    --gold: #d2b06e;
+    --ink: #17283d;
+    --muted: #657386;
+    --paper: #fffefa;
+    --line: #e4e3dc;
+}
+
+* { box-sizing: border-box; }
+
+body.portal-body {
+    min-height: 100vh;
+    margin: 0;
+    color: #fff;
+    background-color: #091b33;
+    font-family: "Source Sans 3", sans-serif;
+    position: relative;
+    isolation: isolate;
+}
+
+.portal-body::before,
+.portal-body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+}
+
+.portal-body::before {
+    z-index: -2;
+    background: url("https://web.ua.edu.ph/wp-content/uploads/2024/09/UA_Campus-Life_31July_DSC04588.jpg") center 43% / cover no-repeat;
+}
+
+.portal-body::after {
+    z-index: -1;
+    background: linear-gradient(90deg, rgba(7, 22, 42, .88), rgba(8, 27, 51, .74) 56%, rgba(8, 26, 48, .58));
+}
+
+.page-shell {
+    width: min(1220px, calc(100% - 80px));
+    min-height: 100vh;
+    margin: 0 auto;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    position: relative;
+}
+
+.masthead {
+    min-height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, .22);
+}
+
+.brand { display: inline-flex; align-items: center; gap: 14px; color: #fff; text-decoration: none; }
+.brand-seal { width: 52px; height: 52px; padding: 3px; border-radius: 50%; object-fit: contain; background: #fff; }
+.brand-name { display: block; font-size: 16px; font-weight: 700; line-height: 1.2; }
+.brand-unit { display: block; margin-top: 4px; color: rgba(255, 255, 255, .72); font-size: 12px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+.masthead-link { padding: 9px 15px; border: 1px solid rgba(255, 255, 255, .56); color: #fff; font-size: 14px; font-weight: 600; text-decoration: none; transition: background-color 160ms ease, border-color 160ms ease; }
+.masthead-link:hover, .masthead-link:focus-visible { border-color: var(--gold); background: rgba(210, 176, 110, .16); }
+
+.portal-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 450px);
+    align-items: center;
+    gap: clamp(44px, 7vw, 96px);
+    padding: 54px 0 62px;
+}
+
+.hero-copy { max-width: 570px; padding-bottom: 10px; animation: enter 600ms ease both; }
+.eyebrow, .panel-kicker { margin: 0 0 20px; color: var(--gold); font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.eyebrow span { padding: 0 6px; color: rgba(255, 255, 255, .58); }
+.hero-copy h1 { margin: 0; font-family: "Lora", Georgia, serif; font-size: 48px; font-weight: 600; line-height: 1.16; }
+.hero-copy h1 span { color: #e4c987; }
+.hero-description { max-width: 440px; margin: 22px 0 0; color: rgba(255, 255, 255, .83); font-size: 18px; line-height: 1.55; }
+.campus-location { margin: 36px 0 0; padding-left: 15px; border-left: 2px solid var(--gold); color: rgba(255, 255, 255, .76); font-size: 14px; line-height: 1.5; }
+
+.container {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 34px 36px 36px;
+    border-top: 4px solid var(--gold);
+    background: var(--paper);
+    box-shadow: 0 22px 64px rgba(0, 0, 0, .23);
+    color: var(--ink);
+    animation: enter 700ms 90ms ease both;
+}
+
+.container .panel-kicker { margin-bottom: 9px; color: #8c6c30; font-size: 11px; }
+.container h2 { margin: 0; color: var(--navy); font-family: "Lora", Georgia, serif; font-size: 27px; font-weight: 600; line-height: 1.25; }
+.subtitle { margin: 8px 0 25px; color: var(--muted); font-size: 15px; line-height: 1.45; }
+label { display: block; margin: 18px 0 6px; color: #26384d; font-size: 14px; font-weight: 700; }
+
+input, select {
+    display: block;
+    width: 100%;
+    min-height: 46px;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid #cfd3d6;
+    border-radius: 2px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 15px;
+}
+
+input::placeholder { color: #8b929a; }
+input:focus, select:focus { border-color: #9b793b; outline: 3px solid rgba(210, 176, 110, .24); }
+
+button {
+    width: 100%;
+    min-height: 48px;
+    margin-top: 24px;
+    padding: 11px 16px;
+    border: 0;
+    border-radius: 2px;
+    background: var(--navy);
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    transition: background-color 160ms ease, transform 160ms ease;
+}
+
+button:hover { background: #1c426e; }
+button:active { transform: translateY(1px); }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+.alert { margin: 0 0 18px; padding: 11px 13px; border-left: 3px solid; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.alert-success { border-color: #357c58; background: #e8f2eb; color: #214e36; }
+.alert-danger { border-color: #b7473c; background: #f8e9e7; color: #782d27; }
+.empty-state { margin-top: 23px; padding: 20px; border: 1px solid var(--line); background: #f7f6f1; }
+.empty-state strong { color: var(--navy); font-size: 16px; }
+.empty-state p { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.4; }
+.panel-return { margin: 22px 0 0; font-size: 14px; }
+.panel-return a { color: var(--navy); font-weight: 700; text-decoration-color: #b3975d; text-underline-offset: 4px; }
+.site-footer { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid rgba(255, 255, 255, .22); color: rgba(255, 255, 255, .7); font-size: 12px; }
+
+@keyframes enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 820px) {
+    .page-shell { width: min(calc(100% - 40px), 620px); }
+    .portal-main { grid-template-columns: 1fr; gap: 32px; padding: 44px 0 48px; }
+    .hero-copy h1 { font-size: 40px; }
+    .hero-description { margin-top: 14px; font-size: 16px; }
+    .campus-location { margin-top: 20px; }
+    .portal-body::after { background: rgba(7, 22, 42, .76); }
+}
+
+@media (max-width: 480px) {
+    .page-shell { width: calc(100% - 32px); }
+    .masthead { min-height: 78px; gap: 12px; }
+    .brand { gap: 9px; }
+    .brand-seal { width: 42px; height: 42px; }
+    .brand-name { max-width: 190px; font-size: 14px; }
+    .brand-unit { font-size: 10px; }
+    .masthead-link { padding: 7px 9px; font-size: 12px; }
+    .portal-main { gap: 26px; padding: 34px 0 38px; }
+    .eyebrow { margin-bottom: 13px; font-size: 10px; }
+    .hero-copy h1 { font-size: 34px; }
+    .container { padding: 26px 22px 28px; }
+    .site-footer { align-items: flex-start; flex-direction: column; justify-content: center; gap: 3px; padding: 12px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}

@@ -54,41 +54,49 @@ STUDENT_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UA Lost & Found Portal</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f6f9; }
-        .container { max-width: 600px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin: auto; }
-        h2 { color: #003366; margin-bottom: 5px; }
-        p.subtitle { color: #555; font-size: 14px; margin-top: 0; }
-        label { font-weight: bold; display: block; margin-top: 15px; }
-        input, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { margin-top: 20px; width: 100%; padding: 12px; background: #003366; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
-        button:hover { background: #002244; }
-        .alert { padding: 12px; margin-bottom: 15px; border-radius: 4px; font-weight: bold; }
-        .alert-success { background: #d4edda; color: #155724; }
-        .alert-danger { background: #f8d7da; color: #721c24; }
-        footer { margin-top: 30px; text-align: center; font-size: 12px; color: #aaa; }
-        footer a { color: #aaa; text-decoration: none; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='portal.css') }}">
 </head>
-<body>
-    <div class="container">
-        <h2>🏫 UA Campus Lost & Found</h2>
-        <p class="subtitle">Student Item Claim Verification Portal</p>
+<body class="portal-body student-page">
+    <div class="page-shell">
+        <header class="masthead">
+            <a class="brand" href="/">
+                <img class="brand-seal" src="https://web.ua.edu.ph/wp-content/uploads/2024/09/ua-logo.png" alt="University of the Assumption seal">
+                <span class="brand-name">University of the Assumption<span class="brand-unit">Campus Services</span></span>
+            </a>
+            <a class="masthead-link" href="/admin">Staff access</a>
+        </header>
+        <main class="portal-main">
+            <section class="hero-copy">
+                <p class="eyebrow">Student services <span>/</span> Lost &amp; found</p>
+                <h1>Lost something?<br><span>Let’s bring it home.</span></h1>
+                <p class="hero-description">Browse recently found belongings and verify a claim with a detail only the owner would know.</p>
+                <p class="campus-location">University of the Assumption<br>City of San Fernando, Pampanga</p>
+            </section>
+            <section class="container claim-panel">
+                <p class="panel-kicker">Student claim portal</p>
+                <h2>Find your item</h2>
+                <p class="subtitle">Choose an item and enter its identifying detail.</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="alert alert-{{ category }}">{{ message }}</div>
+              <div class="alert alert-{{ category }}" role="status">{{ message }}</div>
             {% endfor %}
           {% endif %}
         {% endwith %}
 
         {% if not items %}
-            <p>There are currently no unclaimed items logged in the system.</p>
+            <div class="empty-state">
+                <strong>No items are waiting to be claimed.</strong>
+                <p>Check back later or contact the campus staff desk.</p>
+            </div>
         {% else %}
             <form action="/" method="POST">
-                <label>Select Item to Claim:</label>
-                <select name="selected_item" required>
+                <label for="selected-item">Select an item</label>
+                <select id="selected-item" name="selected_item" required>
                     {% for item_name, data in items.items() %}
                         <option value="{{ item_name }}">
                             {{ item_name }} (Found at {{ data['location'] }} — {{ data['timestamp'] }})
@@ -96,17 +104,16 @@ STUDENT_TEMPLATE = """
                     {% endfor %}
                 </select>
                 
-                <label>Enter Secret Verification Proof:</label>
-                <input type="text" name="user_attempt" placeholder="e.g., Specific sticker, engraver name, or mark" required>
+                <label for="user-attempt">Identifying detail</label>
+                <input id="user-attempt" type="text" name="user_attempt" placeholder="A sticker, engraving, or distinct mark" required>
                 
-                <button type="submit">Verify My Claim</button>
+                <button type="submit">Verify claim</button>
             </form>
         {% endif %}
 
-        <footer>
-            <p>© University of the Assumption — Information Assurance Project</p>
-            <p><a href="/admin">Staff Access</a></p>
-        </footer>
+            </section>
+        </main>
+        <footer class="site-footer"><span>University of the Assumption</span><span>Information Assurance Project</span></footer>
     </div>
 </body>
 </html>
@@ -119,61 +126,70 @@ STAFF_TEMPLATE = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UA Staff Management Vault</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 30px; background-color: #2c3e50; }
-        .container { max-width: 600px; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); margin: auto; }
-        h2 { color: #2c3e50; margin-bottom: 5px; }
-        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        label { font-weight: bold; display: block; margin-top: 15px; }
-        input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        button { margin-top: 20px; width: 100%; padding: 12px; background: #27ae60; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        button:hover { background: #219150; }
-        .alert { padding: 12px; margin-bottom: 15px; border-radius: 4px; font-weight: bold; }
-        .alert-success { background: #d4edda; color: #155724; }
-        .alert-danger { background: #f8d7da; color: #721c24; }
-        .logout-btn { color: #e74c3c; text-decoration: none; font-weight: bold; font-size: 14px; }
-    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='portal.css') }}">
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>🔑 UA Staff Logging Portal</h2>
+<body class="portal-body staff-page">
+    <div class="page-shell">
+        <header class="masthead">
+            <a class="brand" href="/">
+                <img class="brand-seal" src="https://web.ua.edu.ph/wp-content/uploads/2024/09/ua-logo.png" alt="University of the Assumption seal">
+                <span class="brand-name">University of the Assumption<span class="brand-unit">Campus Services</span></span>
+            </a>
             {% if session.get('staff_logged_in') %}
-                <a href="/logout" class="logout-btn">Logout</a>
+                <a href="/logout" class="masthead-link">Log out</a>
+            {% else %}
+                <a href="/" class="masthead-link">Student portal</a>
             {% endif %}
-        </div>
+        </header>
+        <main class="portal-main">
+            <section class="hero-copy">
+                <p class="eyebrow">Campus services <span>/</span> Staff</p>
+                <h1>Care for what’s<br><span>found on campus.</span></h1>
+                <p class="hero-description">Record found belongings securely so students can identify and reclaim what belongs to them.</p>
+                <p class="campus-location">University of the Assumption<br>City of San Fernando, Pampanga</p>
+            </section>
+            <section class="container staff-panel">
+                <p class="panel-kicker">Staff workspace</p>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="alert alert-{{ category }}">{{ message }}</div>
+              <div class="alert alert-{{ category }}" role="status">{{ message }}</div>
             {% endfor %}
           {% endif %}
         {% endwith %}
 
         {% if not session.get('staff_logged_in') %}
-            <h3>Authorization Required</h3>
+            <h2>Staff sign in</h2>
+            <p class="subtitle">Authorized staff can register found belongings here.</p>
             <form action="/admin" method="POST">
-                <label>Enter Staff Password:</label>
-                <input type="password" name="password" placeholder="Password" required>
-                <button type="submit" style="background:#2c3e50;">Authenticate</button>
+                <label for="staff-password">Staff password</label>
+                <input id="staff-password" type="password" name="password" placeholder="Enter password" required>
+                <button type="submit">Sign in</button>
             </form>
         {% else %}
-            <h3>Register Found Item</h3>
+            <h2>Register an item</h2>
+            <p class="subtitle">Keep one identifying detail private for claim verification.</p>
             <form action="/admin/log" method="POST">
-                <label>Item Name / Description:</label>
-                <input type="text" name="item_name" placeholder="e.g., Black Asus Laptop" required>
+                <label for="item-name">Item name or description</label>
+                <input id="item-name" type="text" name="item_name" placeholder="Black laptop" required>
                 
-                <label>Found Location:</label>
-                <input type="text" name="location" placeholder="e.g., UA Library Room 201" required>
+                <label for="item-location">Where it was found</label>
+                <input id="item-location" type="text" name="location" placeholder="Library, second floor" required>
                 
-                <label>Secret Verification Proof (Encrypted):</label>
-                <input type="password" name="secret_proof" placeholder="e.g., Frog sticker on back" required>
+                <label for="secret-proof">Private identifying detail</label>
+                <input id="secret-proof" type="password" name="secret_proof" placeholder="A sticker, engraving, or distinct mark" required>
                 
-                <button type="submit">Encrypt & Save Item (AES-256)</button>
+                <button type="submit">Encrypt and save item</button>
             </form>
-            <p style="margin-top: 20px;"><a href="/" style="color: #2c3e50;">← Back to Student View</a></p>
+            <p class="panel-return"><a href="/">Return to student portal</a></p>
         {% endif %}
+            </section>
+        </main>
+        <footer class="site-footer"><span>University of the Assumption</span><span>Staff access</span></footer>
     </div>
 </body>
 </html>
@@ -199,9 +215,9 @@ def student_view():
             )
 
             if is_valid:
-                flash(f"✅ Claim Validated for '{selected_item}'! Please present this screen to UA Lost & Found staff.", "success")
+                flash(f"Claim validated for '{selected_item}'. Please present this screen to campus staff.", "success")
             else:
-                flash("❌ Verification Failed. Provided proof answer does not match the encrypted record.", "danger")
+                flash("Verification failed. The identifying detail does not match the record.", "danger")
 
     return render_template_string(STUDENT_TEMPLATE, items=ITEMS_DB)
 
