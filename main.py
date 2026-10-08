@@ -1,6 +1,7 @@
 import base64
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from flask import Flask, render_template_string, request, flash, redirect, url_for, session
 from Cryptodome.Cipher import AES
 from Cryptodome.Util.Padding import pad, unpad
@@ -260,7 +261,7 @@ def admin_log_item():
             "location": location,
             "ciphertext": ciphertext,
             "iv": iv,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %I:%M %p")
+            "timestamp": datetime.now(ZoneInfo("Asia/Manila")).strftime("%Y-%m-%d %I:%M %p")
         }
         flash(f"Item '{item_name}' encrypted with AES-256 and saved to database!", "success")
     else:
