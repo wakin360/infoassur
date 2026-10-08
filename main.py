@@ -1,23 +1,51 @@
+import base64
 import os
 from datetime import datetime
 from flask import Flask, render_template_string, request, flash, redirect, url_for, session
+from Cryptodome.Cipher import AES
+from Cryptodome.Util.Padding import pad, unpad
 
-# Import crypto module directly
-from app.crypto_engine import generate_key, encrypt_secret_answer, verify_student_claim
-
+# Initialize Flask App
 app = Flask(__name__)
-
-# Fallback environment variables so Vercel never crashes
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "ua_secret_session_key_2026")
 STAFF_PASSWORD = os.environ.get("STAFF_PASSWORD", "admin")
 
-# Static key & in-memory database for Vercel serverless execution
+# ==============================================================================
+# CRYPTOGRAPHIC MODULE (AES-256)
+# ==============================================================================
+
+def generate_key() -> bytes:
+    return os.urandom(32)
+
+def encrypt_secret_answer(secret_text: str, key: bytes) -> tuple[str, str]:
+    clean_bytes = secret_text.strip().lower().encode('utf-8')
+    padded_bytes = pad(clean_bytes, AES.block_size)
+    iv = os.urandom(16)
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    ciphertext = cipher.encrypt(padded_bytes)
+    return base64.b64encode(ciphertext).decode('utf-8'), base64.b64encode(iv).decode('utf-8')
+
+def decrypt_secret_answer(ciphertext_b64: str, iv_b64: str, key: bytes) -> str:
+    ciphertext = base64.b64decode(ciphertext_b64)
+    iv = base64.b64decode(iv_b64)
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    decrypted_padded = cipher.decrypt(ciphertext)
+    return unpad(decrypted_padded, AES.block_size).decode('utf-8')
+
+def verify_student_claim(user_input: str, ciphertext_b64: str, iv_b64: str, key: bytes) -> bool:
+    try:
+        decrypted_secret = decrypt_secret_answer(ciphertext_b64, iv_b64, key)
+        return user_input.strip().lower() == decrypted_secret
+    except Exception:
+        return False
+
+# In-Memory Storage & Session Key
 SYSTEM_KEY = generate_key()
 ITEMS_DB = {}
 
-# ------------------------------------------------------------------------------
+# ==============================================================================
 # HTML TEMPLATES
-# ------------------------------------------------------------------------------
+# ==============================================================================
 
 STUDENT_TEMPLATE = """
 <!DOCTYPE html>
@@ -151,9 +179,9 @@ STAFF_TEMPLATE = """
 </html>
 """
 
-# ------------------------------------------------------------------------------
-# ROUTES
-# ------------------------------------------------------------------------------
+# ==============================================================================
+# FLASK ROUTES
+# ==============================================================================
 
 @app.route("/", methods=["GET", "POST"])
 def student_view():
@@ -163,8 +191,7 @@ def student_view():
 
         if selected_item in ITEMS_DB:
             record = ITEMS_DB[selected_item]
-            
-            is_valid, _ = verify_student_claim(
+            is_valid = verify_student_claim(
                 user_input=user_attempt,
                 ciphertext_b64=record["ciphertext"],
                 iv_b64=record["iv"],
@@ -204,7 +231,6 @@ def admin_log_item():
 
     if item_name and secret_proof:
         ciphertext, iv = encrypt_secret_answer(secret_proof, SYSTEM_KEY)
-        
         ITEMS_DB[item_name] = {
             "location": location,
             "ciphertext": ciphertext,
@@ -225,7 +251,6 @@ def logout():
     return redirect(url_for("student_view"))
 
 
-# Expose WSGI handler for Vercel
 app = app
 
 if __name__ == "__main__":
