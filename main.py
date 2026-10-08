@@ -1,34 +1,22 @@
-import json
 import os
 from datetime import datetime
 from flask import Flask, render_template_string, request, flash, redirect, url_for, session
+
+# Import crypto module directly
 from app.crypto_engine import generate_key, encrypt_secret_answer, verify_student_claim
 
 app = Flask(__name__)
-import os
 
-# Uses environment variables if set, otherwise falls back to defaults
-FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "ua_secret_session_key_2026")
+# Fallback environment variables so Vercel never crashes
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "ua_secret_session_key_2026")
 STAFF_PASSWORD = os.environ.get("STAFF_PASSWORD", "admin")
 
-
-# 1. KEY GENERATION: Static symmetric key for the session
+# Static key & in-memory database for Vercel serverless execution
 SYSTEM_KEY = generate_key()
-DB_FILE = "database.json"
-
-# Persistence helpers
-def load_db():
-    if os.path.exists(DB_FILE):
-        with open(DB_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-def save_db(data):
-    with open(DB_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+ITEMS_DB = {}
 
 # ------------------------------------------------------------------------------
-# HTML TEMPLATES (Separated for Student vs Staff)
+# HTML TEMPLATES
 # ------------------------------------------------------------------------------
 
 STUDENT_TEMPLATE = """
@@ -167,18 +155,15 @@ STAFF_TEMPLATE = """
 # ROUTES
 # ------------------------------------------------------------------------------
 
-# 1. PUBLIC STUDENT ROUTE (Default Root URL)
 @app.route("/", methods=["GET", "POST"])
 def student_view():
-    db = load_db()
     if request.method == "POST":
         selected_item = request.form.get("selected_item")
         user_attempt = request.form.get("user_attempt", "").strip()
 
-        if selected_item in db:
-            record = db[selected_item]
+        if selected_item in ITEMS_DB:
+            record = ITEMS_DB[selected_item]
             
-            # Execute AES-256 Decryption & Verification
             is_valid, _ = verify_student_claim(
                 user_input=user_attempt,
                 ciphertext_b64=record["ciphertext"],
@@ -191,10 +176,9 @@ def student_view():
             else:
                 flash("❌ Verification Failed. Provided proof answer does not match the encrypted record.", "danger")
 
-    return render_template_string(STUDENT_TEMPLATE, items=db)
+    return render_template_string(STUDENT_TEMPLATE, items=ITEMS_DB)
 
 
-# 2. PRIVATE STAFF AUTHENTICATION ROUTE
 @app.route("/admin", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
@@ -208,14 +192,12 @@ def admin_login():
     return render_template_string(STAFF_TEMPLATE)
 
 
-# 3. PRIVATE STAFF ITEM LOGGING ROUTE
 @app.route("/admin/log", methods=["POST"])
 def admin_log_item():
     if not session.get("staff_logged_in"):
         flash("Unauthorized access.", "danger")
         return redirect(url_for("admin_login"))
 
-    db = load_db()
     item_name = request.form.get("item_name", "").strip()
     location = request.form.get("location", "").strip()
     secret_proof = request.form.get("secret_proof", "").strip()
@@ -223,13 +205,12 @@ def admin_log_item():
     if item_name and secret_proof:
         ciphertext, iv = encrypt_secret_answer(secret_proof, SYSTEM_KEY)
         
-        db[item_name] = {
+        ITEMS_DB[item_name] = {
             "location": location,
             "ciphertext": ciphertext,
             "iv": iv,
             "timestamp": datetime.now().strftime("%Y-%m-%d %I:%M %p")
         }
-        save_db(db)
         flash(f"Item '{item_name}' encrypted with AES-256 and saved to database!", "success")
     else:
         flash("Please fill in all required fields.", "danger")
@@ -237,13 +218,15 @@ def admin_log_item():
     return redirect(url_for("admin_login"))
 
 
-# 4. LOGOUT ROUTE
 @app.route("/logout")
 def logout():
     session.pop("staff_logged_in", None)
     flash("Logged out from staff portal.", "success")
     return redirect(url_for("student_view"))
 
+
+# Expose WSGI handler for Vercel
+app = app
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
