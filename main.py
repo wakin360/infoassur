@@ -5,13 +5,12 @@ from flask import Flask, render_template_string, request, flash, redirect, url_f
 from app.crypto_engine import generate_key, encrypt_secret_answer, verify_student_claim
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY")
+import os
 
-# Staff / Admin Master Password
-STAFF_PASSWORD = os.environ.get("STAFF_PASSWORD")
+# Uses environment variables if set, otherwise falls back to defaults
+FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "ua_secret_session_key_2026")
+STAFF_PASSWORD = os.environ.get("STAFF_PASSWORD", "admin")
 
-if not app.secret_key or not STAFF_PASSWORD:
-    raise RuntimeError("Set FLASK_SECRET_KEY and STAFF_PASSWORD before starting the app.")
 
 # 1. KEY GENERATION: Static symmetric key for the session
 SYSTEM_KEY = generate_key()
