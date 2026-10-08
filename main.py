@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from flask import Flask, render_template_string, request, flash, redirect, url_for, session
 from Cryptodome.Cipher import AES
 from Cryptodome.Util.Padding import pad, unpad
+from app import database
 
 # Initialize Flask App
 app = Flask(__name__)
@@ -40,9 +41,14 @@ def verify_student_claim(user_input: str, ciphertext_b64: str, iv_b64: str, key:
     except Exception:
         return False
 
-# In-Memory Storage & Session Key
-SYSTEM_KEY = generate_key()
-ITEMS_DB = {}
+# The encryption key must remain stable across serverless invocations.
+try:
+    SYSTEM_KEY = bytes.fromhex(os.environ.get("ENCRYPTION_KEY", ""))
+except ValueError:
+    SYSTEM_KEY = b""
+
+if len(SYSTEM_KEY) != 32:
+    SYSTEM_KEY = b""
 
 # ==============================================================================
 # HTML TEMPLATES
@@ -88,7 +94,9 @@ STUDENT_TEMPLATE = """
           {% endif %}
         {% endwith %}
 
-        {% if not items %}
+        {% if storage_error %}
+            <div class="alert alert-danger" role="alert">{{ storage_error }}</div>
+        {% elif not items %}
             <div class="empty-state">
                 <strong>No items are waiting to be claimed.</strong>
                 <p>Check back later or contact the campus staff desk.</p>
@@ -205,12 +213,23 @@ STAFF_TEMPLATE = """
 
 @app.route("/", methods=["GET", "POST"])
 def student_view():
+    storage_error = None
+    if len(SYSTEM_KEY) != 32:
+        items = {}
+        storage_error = "Item verification is not configured. Please contact campus staff."
+    else:
+        try:
+            items = database.load_items()
+        except (database.StorageNotConfigured, RuntimeError):
+            items = {}
+            storage_error = "Shared item storage is not configured or is temporarily unavailable. Please contact campus staff."
+
     if request.method == "POST":
         selected_item = request.form.get("selected_item")
         user_attempt = request.form.get("user_attempt", "").strip()
 
-        if selected_item in ITEMS_DB:
-            record = ITEMS_DB[selected_item]
+        if selected_item in items:
+            record = items[selected_item]
             is_valid = verify_student_claim(
                 user_input=user_attempt,
                 ciphertext_b64=record["ciphertext"],
@@ -223,13 +242,13 @@ def student_view():
             else:
                 flash("Verification failed. The identifying detail does not match the record.", "danger")
 
-    return render_template_string(STUDENT_TEMPLATE, items=ITEMS_DB)
+    return render_template_string(STUDENT_TEMPLATE, items=items, storage_error=storage_error)
 
 
 @app.route("/admin", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
-        if not STAFF_PASSWORD or not app.secret_key:
+        if not STAFF_PASSWORD or not app.secret_key or not database.is_configured() or len(SYSTEM_KEY) != 32:
             return render_template_string(
                 STAFF_TEMPLATE,
                 setup_error="Staff access is not configured. Contact the system administrator.",
@@ -242,7 +261,10 @@ def admin_login():
         else:
             flash("Incorrect staff password!", "danger")
             
-    return render_template_string(STAFF_TEMPLATE, setup_error=None)
+    setup_error = None
+    if not STAFF_PASSWORD or not app.secret_key or not database.is_configured() or len(SYSTEM_KEY) != 32:
+        setup_error = "Staff access and shared storage are not fully configured. Contact the system administrator."
+    return render_template_string(STAFF_TEMPLATE, setup_error=setup_error)
 
 
 @app.route("/admin/log", methods=["POST"])
@@ -251,19 +273,26 @@ def admin_log_item():
         flash("Unauthorized access.", "danger")
         return redirect(url_for("admin_login"))
 
+    if not database.is_configured() or len(SYSTEM_KEY) != 32:
+        flash("Shared storage is not configured. The item was not saved.", "danger")
+        return redirect(url_for("admin_login"))
+
     item_name = request.form.get("item_name", "").strip()
     location = request.form.get("location", "").strip()
     secret_proof = request.form.get("secret_proof", "").strip()
 
     if item_name and secret_proof:
-        ciphertext, iv = encrypt_secret_answer(secret_proof, SYSTEM_KEY)
-        ITEMS_DB[item_name] = {
-            "location": location,
-            "ciphertext": ciphertext,
-            "iv": iv,
-            "timestamp": datetime.now(ZoneInfo("Asia/Manila")).strftime("%Y-%m-%d %I:%M %p")
-        }
-        flash(f"Item '{item_name}' encrypted with AES-256 and saved to database!", "success")
+        try:
+            ciphertext, iv = encrypt_secret_answer(secret_proof, SYSTEM_KEY)
+            database.save_item(item_name, {
+                "location": location,
+                "ciphertext": ciphertext,
+                "iv": iv,
+                "timestamp": datetime.now(ZoneInfo("Asia/Manila")).strftime("%Y-%m-%d %I:%M %p"),
+            })
+            flash(f"Item '{item_name}' encrypted with AES-256 and saved!", "success")
+        except RuntimeError:
+            flash("Could not save the item to shared storage. Please try again.", "danger")
     else:
         flash("Please fill in all required fields.", "danger")
 
